@@ -1,38 +1,50 @@
+const MEMORY_SIZE: usize = 4096;
+const PROGRAM_START_INDEX: usize = 0x200;
+const PROGRAM_START_ADDRESS: u16 = 0x200;
+const DISPLAY_WIDTH: usize = 64;
+const DISPLAY_HEIGHT: usize = 32;
+const REGISTER_COUNT: usize = 16;
+const STACK_SIZE: usize = 16;
+const MAX_ROM_SIZE: usize = MEMORY_SIZE - PROGRAM_START_INDEX;
+
 pub struct Emulator {
-    v: [u8; 16],
+    v: [u8; REGISTER_COUNT],
     i: u16,
     pc: u16,
-    memory: [u8; 4096],
-    stack: [u16; 16],
-    display: [[bool; 64]; 32],
+    memory: [u8; MEMORY_SIZE],
+    stack: [u16; STACK_SIZE],
+    display: [[bool; DISPLAY_WIDTH]; DISPLAY_HEIGHT],
 }
 
 impl Emulator {
     // TODO: Maybe switch to Result later instead of panicking right away
     pub fn load(&mut self, bytes: &[u8]) {
         assert!(
-            bytes.len() <= self.memory.len() - 0x200,
-            "Cannot load a ROM larger than 3584 bytes long"
+            bytes.len() <= MAX_ROM_SIZE,
+            "Cannot load a ROM larger than {0} bytes long",
+            MAX_ROM_SIZE
         );
 
-        let rom = &mut self.memory[0x200..0x200 + bytes.len()];
+        let rom = &mut self.memory[PROGRAM_START_INDEX..PROGRAM_START_INDEX + bytes.len()];
         rom.copy_from_slice(bytes);
 
-        self.pc = 0x200;
+        self.pc = PROGRAM_START_ADDRESS;
     }
 
     pub fn execute(&mut self) {}
 
-    pub fn reset(&mut self) {}
+    pub fn reset(&mut self) {
+        *self = Self::new();
+    }
 
     pub fn new() -> Emulator {
         Emulator {
-            v: [0; 16],
+            v: [0; REGISTER_COUNT],
             i: 0,
-            pc: 0x200,
-            memory: [0; 4096],
-            stack: [0; 16],
-            display: [[false; 64]; 32],
+            pc: PROGRAM_START_ADDRESS,
+            memory: [0; MEMORY_SIZE],
+            stack: [0; STACK_SIZE],
+            display: [[false; DISPLAY_WIDTH]; DISPLAY_HEIGHT],
         }
     }
 }
@@ -48,7 +60,7 @@ mod tests {
 
         emulator.load(&bytes);
 
-        let memory = &emulator.memory[0x200..0x200 + 512];
+        let memory = &emulator.memory[PROGRAM_START_INDEX..PROGRAM_START_INDEX + 512];
 
         assert_eq!(&bytes[..], memory);
     }
@@ -61,17 +73,17 @@ mod tests {
         emulator.pc = 0x00;
         emulator.load(&bytes);
 
-        assert_eq!(0x200, emulator.pc);
+        assert_eq!(PROGRAM_START_ADDRESS, emulator.pc);
     }
 
     #[test]
     fn load_accepts_largest_valid_rom() {
         let mut emulator = Emulator::new();
-        let bytes: [u8; 3584] = [1; 3584];
+        let bytes: [u8; MAX_ROM_SIZE] = [1; MAX_ROM_SIZE];
 
         emulator.load(&bytes);
 
-        let memory = &emulator.memory[0x200..0x200 + 3584];
+        let memory = &emulator.memory[PROGRAM_START_INDEX..PROGRAM_START_INDEX + MAX_ROM_SIZE];
 
         assert_eq!(&bytes[..], memory);
     }
@@ -80,8 +92,29 @@ mod tests {
     #[should_panic]
     fn load_rejects_rom_larger_than_memory() {
         let mut emulator = Emulator::new();
-        let bytes: [u8; 3585] = [1; 3585];
+        let bytes: [u8; MAX_ROM_SIZE + 1] = [1; MAX_ROM_SIZE + 1];
 
         emulator.load(&bytes);
+    }
+
+    #[test]
+    fn reset_restores_initial_state() {
+        let mut emulator = Emulator::new();
+
+        emulator.v = [1; REGISTER_COUNT];
+        emulator.i = 128;
+        emulator.pc = 0x400;
+        emulator.memory = [1; MEMORY_SIZE];
+        emulator.stack = [1; STACK_SIZE];
+        emulator.display = [[true; DISPLAY_WIDTH]; DISPLAY_HEIGHT];
+
+        emulator.reset();
+
+        assert_eq!(emulator.v, [0; REGISTER_COUNT]);
+        assert_eq!(emulator.i, 0);
+        assert_eq!(emulator.pc, PROGRAM_START_ADDRESS);
+        assert_eq!(emulator.memory, [0; MEMORY_SIZE]);
+        assert_eq!(emulator.stack, [0; STACK_SIZE]);
+        assert_eq!(emulator.display, [[false; DISPLAY_WIDTH]; DISPLAY_HEIGHT]);
     }
 }
