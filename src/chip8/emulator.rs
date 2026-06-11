@@ -55,23 +55,16 @@ impl Emulator {
         self.pc += 2;
 
         // Mask the first 4 bits and match with instructions
-        /*
-         * First set of instructions to implement
-         * 00E0 (clear screen)
-         * 1NNN (jump)
-         * 6XNN (set register VX)
-         * 7XNN (add value to register VX)
-         * ANNN (set index register I)
-         * DXYN (display/draw)
-         */
-
         let opcode = instruction & 0xF000;
+
+        // Decode the rest of the instruction
         let x = usize::from((instruction & 0x0F00) >> 8); // more convenient as usize to be used in self.v[x]
         let y = usize::from((instruction & 0x00F0) >> 4); // more convenient as usize to be used in self.v[y]
-        let n = instruction & 0x000F;
+        let n = (instruction & 0x000F) as u8;
         let nn = (instruction & 0x00FF) as u8;
         let nnn = instruction & 0x0FFF;
 
+        // Match and execute the instruction
         match opcode {
             0x0000 => match instruction {
                 0x00E0 => self.display = [[false; DISPLAY_WIDTH]; DISPLAY_HEIGHT], // clear display
@@ -82,13 +75,38 @@ impl Emulator {
             0x6000 => self.v[x] = nn, // set VX to NN
             0x7000 => self.v[x] = self.v[x].wrapping_add(nn), // add NN to VX (wraps on overflow)
             0xA000 => self.i = nnn,   // set I to NNN
-            0xD000 => println!("Draw"),
+            0xD000 => {
+                assert!(
+                    usize::from(self.i + u16::from(n)) <= MEMORY_SIZE,
+                    "Cannot fetch sprite pixels from beyond available memory"
+                );
+
+                let x_start = usize::from(self.v[x]) % DISPLAY_WIDTH;
+                let y_start = usize::from(self.v[y]) % DISPLAY_HEIGHT;
+                let x_end = std::cmp::min(DISPLAY_WIDTH, x_start + 8);
+                let y_end = std::cmp::min(DISPLAY_HEIGHT, y_start + usize::from(n));
+
+                let mut overflow = false;
+
+                for (row_index, row) in self.display[y_start..y_end].iter_mut().enumerate() {
+                    let sprite_pixels = self.memory[usize::from(self.i) + row_index];
+                    for (pixel_index, pixel) in row[x_start..x_end].iter_mut().enumerate() {
+                        let display_pixel = *pixel;
+                        let sprite_pixel = (sprite_pixels & (0b10000000 >> pixel_index)) != 0;
+
+                        *pixel = display_pixel ^ sprite_pixel;
+
+                        if display_pixel && sprite_pixel {
+                            overflow = true;
+                        }
+                    }
+                }
+
+                self.v[0xF] = if overflow { 1 } else { 0 };
+            }
 
             _ => panic!("Unknown instruction"),
         };
-
-        // Decode the rest of the instruction
-        // Execute the instruction
     }
 
     pub fn reset(&mut self) {
