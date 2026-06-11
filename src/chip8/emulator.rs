@@ -7,6 +7,12 @@ const REGISTER_COUNT: usize = 16;
 const STACK_SIZE: usize = 16;
 const MAX_ROM_SIZE: usize = MEMORY_SIZE - PROGRAM_START_INDEX;
 
+/*
+ * access pixel with inverted coords -> display[y][x]
+ * because we have an array of 32 rows of 64 pixels
+ * so we specify y coordinate first selecting a row
+ * then specify x coordinate selecting a pixel in that row
+ */
 pub struct Emulator {
     v: [u8; REGISTER_COUNT],
     i: u16,
@@ -142,7 +148,7 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn load_rejects_rom_larger_than_memory() {
+    fn load_rom_larger_than_memory_panics() {
         let mut emulator = Emulator::new();
         let bytes: [u8; MAX_ROM_SIZE + 1] = [1; MAX_ROM_SIZE + 1];
 
@@ -227,33 +233,33 @@ mod tests {
 
         emulator.execute();
 
-        assert_eq!(emulator.v[3], 0xFE);
+        assert_eq!(emulator.v[0x3], 0xFE);
     }
 
     #[test]
     fn execute_7xnn_adds_nn_to_vx() {
         let mut emulator = Emulator::new();
 
-        emulator.v[2] = 0x15;
+        emulator.v[0x2] = 0x15;
         emulator.memory[PROGRAM_START_INDEX] = 0x72;
         emulator.memory[PROGRAM_START_INDEX + 1] = 0x44;
 
         emulator.execute();
 
-        assert_eq!(emulator.v[2], 0x59);
+        assert_eq!(emulator.v[0x2], 0x59);
     }
 
     #[test]
     fn execute_7xnn_wraps_on_overflow() {
         let mut emulator = Emulator::new();
 
-        emulator.v[2] = 0xF0;
+        emulator.v[0x2] = 0xF0;
         emulator.memory[PROGRAM_START_INDEX] = 0x72;
         emulator.memory[PROGRAM_START_INDEX + 1] = 0x20;
 
         emulator.execute();
 
-        assert_eq!(emulator.v[2], 0x10);
+        assert_eq!(emulator.v[0x2], 0x10);
     }
 
     #[test]
@@ -266,5 +272,140 @@ mod tests {
         emulator.execute();
 
         assert_eq!(emulator.i, 0x123);
+    }
+
+    #[test]
+    fn execute_dxyn_updates_display_clears_vf_with_no_collision() {
+        let mut emulator = Emulator::new();
+
+        emulator.v[0x1] = 0x04; // x coordinate
+        emulator.v[0x2] = 0x02; // y coordinate
+        emulator.v[0xF] = 1; // overflow bit
+
+        emulator.display[0x02][0x04] = true;
+        emulator.display[0x03][0x08] = true;
+        emulator.display[0x03][0x09] = true;
+        emulator.display[0x03][0x0A] = true;
+        emulator.display[0x03][0x0B] = true;
+
+        emulator.memory[PROGRAM_START_INDEX + 0x100] = 0b01010101;
+        emulator.memory[PROGRAM_START_INDEX + 0x101] = 0b11110000;
+
+        emulator.i = PROGRAM_START_ADDRESS + 0x100;
+
+        emulator.memory[PROGRAM_START_INDEX] = 0xD1;
+        emulator.memory[PROGRAM_START_INDEX + 1] = 0x22;
+
+        emulator.execute();
+
+        assert_eq!(
+            emulator.display[0x02][0x04..0x0C],
+            [true, true, false, true, false, true, false, true]
+        );
+        assert_eq!(
+            emulator.display[0x03][0x04..0x0C],
+            [true, true, true, true, true, true, true, true]
+        );
+        assert_eq!(emulator.v[0xF], 0);
+    }
+
+    #[test]
+    fn execute_dxyn_updates_display_sets_vf_on_collision() {
+        let mut emulator = Emulator::new();
+
+        emulator.v[0x1] = 0x04; // x coordinate
+        emulator.v[0x2] = 0x02; // y coordinate
+        emulator.v[0xF] = 0; // overflow bit
+
+        emulator.display[0x02][0x04] = true;
+
+        emulator.memory[PROGRAM_START_INDEX + 0x100] = 0b11111111;
+
+        emulator.i = PROGRAM_START_ADDRESS + 0x100;
+
+        emulator.memory[PROGRAM_START_INDEX] = 0xD1;
+        emulator.memory[PROGRAM_START_INDEX + 1] = 0x21;
+
+        emulator.execute();
+
+        assert_eq!(
+            emulator.display[0x02][0x04..0x0C],
+            [false, true, true, true, true, true, true, true]
+        );
+
+        assert_eq!(emulator.v[0xF], 1);
+    }
+
+    #[test]
+    fn execute_dxyn_wraps_starting_coordinates() {
+        let mut emulator = Emulator::new();
+
+        emulator.v[0x1] = 0x60; // x coordinate wraps to 0x20
+        emulator.v[0x2] = 0x30; // y coordinate wraps to 0x10
+
+        emulator.memory[PROGRAM_START_INDEX + 0x100] = 0b11110001;
+
+        emulator.i = PROGRAM_START_ADDRESS + 0x100;
+
+        emulator.memory[PROGRAM_START_INDEX] = 0xD1;
+        emulator.memory[PROGRAM_START_INDEX + 1] = 0x21;
+
+        emulator.execute();
+
+        assert_eq!(
+            emulator.display[0x10][0x20..0x28],
+            [true, true, true, true, false, false, false, true]
+        );
+    }
+
+    #[test]
+    fn execute_dxy_clips_sprite_pixels_past_display_bounds() {
+        let mut emulator = Emulator::new();
+
+        emulator.v[0xA] = 0x3C; // x coordinate starts at pixel 60
+        emulator.v[0xB] = 0x1F; // y coordinate starts at row 31
+
+        emulator.memory[PROGRAM_START_INDEX + 0x100] = 0b11111111;
+        emulator.memory[PROGRAM_START_INDEX + 0x101] = 0b11111111;
+
+        emulator.i = PROGRAM_START_ADDRESS + 0x100;
+
+        emulator.memory[PROGRAM_START_INDEX] = 0xDA;
+        emulator.memory[PROGRAM_START_INDEX + 1] = 0xB2;
+
+        emulator.execute();
+
+        assert_eq!(emulator.display[0x1F][0x3C..0x40], [true, true, true, true]);
+        assert_eq!(
+            emulator.display[0x00][0x3C..0x40],
+            [false, false, false, false]
+        );
+        assert_eq!(
+            emulator.display[0x1F][0x00..0x04],
+            [false, false, false, false]
+        );
+        assert_eq!(
+            emulator.display[0x00][0x00..0x04],
+            [false, false, false, false]
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn execute_dxyn_past_memory_bounds_panics() {
+        let mut emulator = Emulator::new();
+
+        emulator.v[0x1] = 0x04; // x coordinate
+        emulator.v[0x2] = 0x02; // y coordinate
+
+        emulator.memory[PROGRAM_START_INDEX + 0x100] = 0b01010101;
+        emulator.memory[PROGRAM_START_INDEX + 0x101] = 0b11110000;
+
+        emulator.i = MEMORY_SIZE as u16 - 1;
+
+        emulator.memory[PROGRAM_START_INDEX] = 0xD1;
+        emulator.memory[PROGRAM_START_INDEX + 1] = 0x22;
+
+        emulator.execute();
     }
 }
