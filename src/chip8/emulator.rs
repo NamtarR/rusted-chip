@@ -7,6 +7,8 @@ const REGISTER_COUNT: usize = 16;
 const STACK_SIZE: usize = 16;
 const MAX_ROM_SIZE: usize = MEMORY_SIZE - PROGRAM_START_INDEX;
 
+pub type Display = [[bool; DISPLAY_WIDTH]; DISPLAY_HEIGHT];
+
 /*
  * access pixel with inverted coords -> display[y][x]
  * because we have an array of 32 rows of 64 pixels
@@ -19,7 +21,7 @@ pub struct Emulator {
     pc: u16,
     memory: [u8; MEMORY_SIZE],
     stack: [u16; STACK_SIZE],
-    display: [[bool; DISPLAY_WIDTH]; DISPLAY_HEIGHT],
+    display: Display,
 }
 
 impl Emulator {
@@ -111,6 +113,10 @@ impl Emulator {
 
     pub fn reset(&mut self) {
         *self = Self::new();
+    }
+
+    pub fn display(&self) -> &Display {
+        &self.display
     }
 
     pub fn new() -> Emulator {
