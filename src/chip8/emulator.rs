@@ -21,6 +21,7 @@ pub struct Emulator {
     pc: u16,
     memory: [u8; MEMORY_SIZE],
     stack: [u16; STACK_SIZE],
+    stack_pointer: usize,
     display: Display,
 }
 
@@ -70,10 +71,30 @@ impl Emulator {
         match opcode {
             0x0000 => match instruction {
                 0x00E0 => self.display = [[false; DISPLAY_WIDTH]; DISPLAY_HEIGHT], // clear display
+                0x00EE => {
+                    assert!(
+                        self.stack_pointer != 0,
+                        "Cannot return from subroutine: stack is empty"
+                    );
+
+                    self.stack_pointer -= 1;
+                    self.pc = self.stack[self.stack_pointer];
+                    self.stack[self.stack_pointer] = 0;
+                }
 
                 _ => panic!("Unknown instruction"),
             },
-            0x1000 => self.pc = nnn,  // set PC to NNN
+            0x1000 => self.pc = nnn, // set PC to NNN
+            0x2000 => {
+                assert!(
+                    self.stack_pointer < self.stack.len(),
+                    "Cannot call subroutine: stack overflow"
+                );
+
+                self.stack[self.stack_pointer] = self.pc;
+                self.pc = nnn;
+                self.stack_pointer += 1;
+            }
             0x6000 => self.v[x] = nn, // set VX to NN
             0x7000 => self.v[x] = self.v[x].wrapping_add(nn), // add NN to VX (wraps on overflow)
             0xA000 => self.i = nnn,   // set I to NNN
@@ -126,6 +147,7 @@ impl Emulator {
             pc: PROGRAM_START_ADDRESS,
             memory: [0; MEMORY_SIZE],
             stack: [0; STACK_SIZE],
+            stack_pointer: 0,
             display: [[false; DISPLAY_WIDTH]; DISPLAY_HEIGHT],
         }
     }
@@ -188,6 +210,7 @@ mod tests {
         emulator.pc = 0x400;
         emulator.memory = [1; MEMORY_SIZE];
         emulator.stack = [1; STACK_SIZE];
+        emulator.stack_pointer = 13;
         emulator.display = [[true; DISPLAY_WIDTH]; DISPLAY_HEIGHT];
 
         emulator.reset();
@@ -197,6 +220,7 @@ mod tests {
         assert_eq!(emulator.pc, PROGRAM_START_ADDRESS);
         assert_eq!(emulator.memory, [0; MEMORY_SIZE]);
         assert_eq!(emulator.stack, [0; STACK_SIZE]);
+        assert_eq!(emulator.stack_pointer, 0);
         assert_eq!(emulator.display, [[false; DISPLAY_WIDTH]; DISPLAY_HEIGHT]);
     }
 
@@ -237,6 +261,35 @@ mod tests {
     }
 
     #[test]
+    fn execute_00ee_pops_stack() {
+        let mut emulator = Emulator::new();
+
+        emulator.stack[0] = 0x400;
+        emulator.stack_pointer = 1;
+        emulator.memory[PROGRAM_START_INDEX] = 0x00;
+        emulator.memory[PROGRAM_START_INDEX + 1] = 0xEE;
+
+        emulator.execute();
+
+        assert_eq!(emulator.pc, 0x400);
+        assert_eq!(emulator.stack_pointer, 0);
+        assert_eq!(emulator.stack[0], 0);
+    }
+
+    #[test]
+    #[should_panic]
+    fn execute_00ee_on_empty_stack_panics() {
+        let mut emulator = Emulator::new();
+
+        emulator.stack[0] = 0x400;
+        emulator.stack_pointer = 0;
+        emulator.memory[PROGRAM_START_INDEX] = 0x00;
+        emulator.memory[PROGRAM_START_INDEX + 1] = 0xEE;
+
+        emulator.execute();
+    }
+
+    #[test]
     fn execute_1nnn_jumps_to_address() {
         let mut emulator = Emulator::new();
 
@@ -246,6 +299,36 @@ mod tests {
         emulator.execute();
 
         assert_eq!(emulator.pc, 0xFED);
+    }
+
+    #[test]
+    fn execute_2nnn_pushes_to_stack() {
+        let mut emulator = Emulator::new();
+
+        emulator.pc = 0x200;
+        emulator.stack[0] = 0;
+        emulator.stack_pointer = 0;
+        emulator.memory[PROGRAM_START_INDEX] = 0x24;
+        emulator.memory[PROGRAM_START_INDEX + 1] = 0x56;
+
+        emulator.execute();
+
+        assert_eq!(emulator.pc, 0x456);
+        assert_eq!(emulator.stack_pointer, 1);
+        assert_eq!(emulator.stack[0], 0x202);
+    }
+
+    #[test]
+    #[should_panic]
+    fn execute_2nnn_on_stack_overflow_panics() {
+        let mut emulator = Emulator::new();
+
+        emulator.pc = 0x200;
+        emulator.stack_pointer = STACK_SIZE;
+        emulator.memory[PROGRAM_START_INDEX] = 0x24;
+        emulator.memory[PROGRAM_START_INDEX + 1] = 0x56;
+
+        emulator.execute();
     }
 
     #[test]
@@ -383,7 +466,7 @@ mod tests {
     }
 
     #[test]
-    fn execute_dxy_clips_sprite_pixels_past_display_bounds() {
+    fn execute_dxyn_clips_sprite_pixels_past_display_bounds() {
         let mut emulator = Emulator::new();
 
         emulator.v[0xA] = 0x3C; // x coordinate starts at pixel 60
