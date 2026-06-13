@@ -95,9 +95,35 @@ impl Emulator {
                 self.pc = nnn;
                 self.stack_pointer += 1;
             }
+            0x3000 => {
+                if self.v[x] == nn {
+                    self.pc += 2;
+                }
+            }
+            0x4000 => {
+                if self.v[x] != nn {
+                    self.pc += 2;
+                }
+            }
+            0x5000 => {
+                if n != 0 {
+                    panic!("Unknown instruction")
+                }
+                if self.v[x] == self.v[y] {
+                    self.pc += 2;
+                }
+            }
             0x6000 => self.v[x] = nn, // set VX to NN
             0x7000 => self.v[x] = self.v[x].wrapping_add(nn), // add NN to VX (wraps on overflow)
-            0xA000 => self.i = nnn,   // set I to NNN
+            0x9000 => {
+                if n != 0 {
+                    panic!("Unknown instruction")
+                }
+                if self.v[x] != self.v[y] {
+                    self.pc += 2;
+                }
+            }
+            0xA000 => self.i = nnn, // set I to NNN
             0xD000 => {
                 assert!(
                     usize::from(self.i + u16::from(n)) <= MEMORY_SIZE,
@@ -305,7 +331,6 @@ mod tests {
     fn execute_2nnn_pushes_to_stack() {
         let mut emulator = Emulator::new();
 
-        emulator.pc = 0x200;
         emulator.stack[0] = 0;
         emulator.stack_pointer = 0;
         emulator.memory[PROGRAM_START_INDEX] = 0x24;
@@ -327,6 +352,113 @@ mod tests {
         emulator.stack_pointer = STACK_SIZE;
         emulator.memory[PROGRAM_START_INDEX] = 0x24;
         emulator.memory[PROGRAM_START_INDEX + 1] = 0x56;
+
+        emulator.execute();
+    }
+
+    #[test]
+    fn execute_3xnn_skips_if_vx_equals_nn() {
+        let mut emulator = Emulator::new();
+
+        emulator.pc = PROGRAM_START_ADDRESS;
+        emulator.v[4] = 0x32;
+
+        emulator.memory[PROGRAM_START_INDEX] = 0x34;
+        emulator.memory[PROGRAM_START_INDEX + 1] = 0x32;
+
+        emulator.execute();
+
+        assert_eq!(emulator.pc, 0x204);
+    }
+
+    #[test]
+    fn execute_3xnn_does_not_skip_if_vx_does_not_equal_nn() {
+        let mut emulator = Emulator::new();
+
+        emulator.pc = PROGRAM_START_ADDRESS;
+        emulator.v[6] = 0x62;
+
+        emulator.memory[PROGRAM_START_INDEX] = 0x36;
+        emulator.memory[PROGRAM_START_INDEX + 1] = 0x32;
+
+        emulator.execute();
+
+        assert_eq!(emulator.pc, 0x202);
+    }
+
+    #[test]
+    fn execute_4xnn_skips_if_vx_does_not_equal_nn() {
+        let mut emulator = Emulator::new();
+
+        emulator.pc = PROGRAM_START_ADDRESS;
+        emulator.v[6] = 0x62;
+
+        emulator.memory[PROGRAM_START_INDEX] = 0x46;
+        emulator.memory[PROGRAM_START_INDEX + 1] = 0x32;
+
+        emulator.execute();
+
+        assert_eq!(emulator.pc, 0x204);
+    }
+
+    #[test]
+    fn execute_4xnn_does_not_skip_if_vx_equals_nn() {
+        let mut emulator = Emulator::new();
+
+        emulator.pc = PROGRAM_START_ADDRESS;
+        emulator.v[4] = 0x32;
+
+        emulator.memory[PROGRAM_START_INDEX] = 0x44;
+        emulator.memory[PROGRAM_START_INDEX + 1] = 0x32;
+
+        emulator.execute();
+
+        assert_eq!(emulator.pc, 0x202);
+    }
+
+    #[test]
+    fn execute_5xy0_skips_if_vx_equals_vy() {
+        let mut emulator = Emulator::new();
+
+        emulator.pc = PROGRAM_START_ADDRESS;
+        emulator.v[4] = 0x32;
+        emulator.v[5] = 0x32;
+
+        emulator.memory[PROGRAM_START_INDEX] = 0x54;
+        emulator.memory[PROGRAM_START_INDEX + 1] = 0x50;
+
+        emulator.execute();
+
+        assert_eq!(emulator.pc, 0x204);
+    }
+
+    #[test]
+    fn execute_5xy0_does_not_skip_if_vx_does_not_equal_vy() {
+        let mut emulator = Emulator::new();
+
+        emulator.pc = PROGRAM_START_ADDRESS;
+        emulator.v[6] = 0x62;
+        emulator.v[7] = 0x63;
+
+        emulator.memory[PROGRAM_START_INDEX] = 0x56;
+        emulator.memory[PROGRAM_START_INDEX + 1] = 0x70;
+
+        emulator.execute();
+
+        assert_eq!(emulator.pc, 0x202);
+    }
+
+    #[test]
+    #[should_panic]
+    fn execute_5xyn_panics() {
+        let mut emulator = Emulator::new();
+
+        emulator.pc = PROGRAM_START_ADDRESS;
+        emulator.v[6] = 0x62;
+        emulator.v[7] = 0x63;
+
+        emulator.memory[PROGRAM_START_INDEX] = 0x56;
+        emulator.memory[PROGRAM_START_INDEX + 1] = 0x71;
 
         emulator.execute();
     }
@@ -367,6 +499,53 @@ mod tests {
         emulator.execute();
 
         assert_eq!(emulator.v[0x2], 0x10);
+    }
+
+    #[test]
+    fn execute_9xy0_skips_if_vx_does_not_equal_vy() {
+        let mut emulator = Emulator::new();
+
+        emulator.pc = PROGRAM_START_ADDRESS;
+        emulator.v[6] = 0x62;
+        emulator.v[7] = 0x63;
+
+        emulator.memory[PROGRAM_START_INDEX] = 0x96;
+        emulator.memory[PROGRAM_START_INDEX + 1] = 0x70;
+
+        emulator.execute();
+
+        assert_eq!(emulator.pc, 0x204);
+    }
+
+    #[test]
+    fn execute_9xy0_does_not_skip_if_vx_equals_vy() {
+        let mut emulator = Emulator::new();
+
+        emulator.pc = PROGRAM_START_ADDRESS;
+        emulator.v[4] = 0x32;
+        emulator.v[5] = 0x32;
+
+        emulator.memory[PROGRAM_START_INDEX] = 0x94;
+        emulator.memory[PROGRAM_START_INDEX + 1] = 0x50;
+
+        emulator.execute();
+
+        assert_eq!(emulator.pc, 0x202);
+    }
+
+    #[test]
+    #[should_panic]
+    fn execute_9xyn_panics() {
+        let mut emulator = Emulator::new();
+
+        emulator.pc = PROGRAM_START_ADDRESS;
+        emulator.v[6] = 0x62;
+        emulator.v[7] = 0x63;
+
+        emulator.memory[PROGRAM_START_INDEX] = 0x96;
+        emulator.memory[PROGRAM_START_INDEX + 1] = 0x71;
+
+        emulator.execute();
     }
 
     #[test]
