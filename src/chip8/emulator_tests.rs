@@ -571,6 +571,19 @@ fn execute_annn_sets_i_to_nnn() {
 }
 
 #[test]
+fn execute_bnnn_jumps_to_address_v0_plus_nnn() {
+    let mut emulator = Emulator::new();
+
+    emulator.v[0] = 0x1A;
+    emulator.memory[PROGRAM_START_INDEX] = 0xB6;
+    emulator.memory[PROGRAM_START_INDEX + 1] = 0x54;
+
+    emulator.execute();
+
+    assert_eq!(emulator.pc, 0x66E);
+}
+
+#[test]
 fn execute_dxyn_updates_display_clears_vf_with_no_collision() {
     let mut emulator = Emulator::new();
 
