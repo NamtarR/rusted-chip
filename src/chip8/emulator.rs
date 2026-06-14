@@ -158,6 +158,7 @@ impl Emulator {
             0xA000 => self.i = nnn, // set I to NNN
             // Currently, implemented as NNN + V0. Will be configurable later.
             0xB000 => self.pc = nnn + u16::from(self.v[0]),
+            0xC000 => self.v[x] = rand::random_range(0..=0xFF) & nn,
             0xD000 => {
                 assert!(
                     usize::from(self.i + u16::from(n)) <= MEMORY_SIZE,

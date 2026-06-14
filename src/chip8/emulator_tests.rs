@@ -584,6 +584,45 @@ fn execute_bnnn_jumps_to_address_v0_plus_nnn() {
 }
 
 #[test]
+fn execute_cxnn_with_zero_mask_sets_vx_to_zero() {
+    let mut emulator = Emulator::new();
+
+    emulator.v[6] = 0x1A;
+    emulator.memory[PROGRAM_START_INDEX] = 0xC6;
+    emulator.memory[PROGRAM_START_INDEX + 1] = 0x00;
+
+    emulator.execute();
+
+    assert_eq!(emulator.v[6], 0);
+}
+
+#[test]
+fn execute_cxnn_with_0f_mask_clears_high_nibble() {
+    let mut emulator = Emulator::new();
+
+    emulator.v[6] = 0x1A;
+    emulator.memory[PROGRAM_START_INDEX] = 0xC6;
+    emulator.memory[PROGRAM_START_INDEX + 1] = 0x0F;
+
+    emulator.execute();
+
+    assert_eq!(emulator.v[6] & 0xF0, 0);
+}
+
+#[test]
+fn execute_cxnn_with_f0_mask_clears_low_nibble() {
+    let mut emulator = Emulator::new();
+
+    emulator.v[6] = 0x1A;
+    emulator.memory[PROGRAM_START_INDEX] = 0xC6;
+    emulator.memory[PROGRAM_START_INDEX + 1] = 0xF0;
+
+    emulator.execute();
+
+    assert_eq!(emulator.v[6] & 0x0F, 0);
+}
+
+#[test]
 fn execute_dxyn_updates_display_clears_vf_with_no_collision() {
     let mut emulator = Emulator::new();
 
