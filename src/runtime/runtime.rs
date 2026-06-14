@@ -14,7 +14,7 @@ impl Runtime {
     }
 
     pub fn run_steps(&mut self, steps: u8) {
-        for step in 0..steps {
+        for _ in 0..steps {
             self.step();
         }
     }
