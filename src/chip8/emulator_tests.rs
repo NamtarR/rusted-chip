@@ -55,6 +55,7 @@ fn reset_restores_initial_state() {
     emulator.stack = [1; STACK_SIZE];
     emulator.stack_pointer = 13;
     emulator.display = [[true; DISPLAY_WIDTH]; DISPLAY_HEIGHT];
+    emulator.input = [true; INPUT_KEYS_COUNT];
 
     emulator.reset();
 
@@ -65,6 +66,7 @@ fn reset_restores_initial_state() {
     assert_eq!(emulator.stack, [0; STACK_SIZE]);
     assert_eq!(emulator.stack_pointer, 0);
     assert_eq!(emulator.display, [[false; DISPLAY_WIDTH]; DISPLAY_HEIGHT]);
+    assert_eq!(emulator.input, [false; INPUT_KEYS_COUNT]);
 }
 
 #[test]
@@ -178,7 +180,7 @@ fn execute_3xnn_skips_if_vx_equals_nn() {
     let mut emulator = Emulator::new();
 
     emulator.pc = PROGRAM_START_ADDRESS;
-    emulator.v[4] = 0x32;
+    emulator.v[0x4] = 0x32;
 
     emulator.memory[PROGRAM_START_INDEX] = 0x34;
     emulator.memory[PROGRAM_START_INDEX + 1] = 0x32;
@@ -193,7 +195,7 @@ fn execute_3xnn_does_not_skip_if_vx_does_not_equal_nn() {
     let mut emulator = Emulator::new();
 
     emulator.pc = PROGRAM_START_ADDRESS;
-    emulator.v[6] = 0x62;
+    emulator.v[0x6] = 0x62;
 
     emulator.memory[PROGRAM_START_INDEX] = 0x36;
     emulator.memory[PROGRAM_START_INDEX + 1] = 0x32;
@@ -208,7 +210,7 @@ fn execute_4xnn_skips_if_vx_does_not_equal_nn() {
     let mut emulator = Emulator::new();
 
     emulator.pc = PROGRAM_START_ADDRESS;
-    emulator.v[6] = 0x62;
+    emulator.v[0x6] = 0x62;
 
     emulator.memory[PROGRAM_START_INDEX] = 0x46;
     emulator.memory[PROGRAM_START_INDEX + 1] = 0x32;
@@ -223,7 +225,7 @@ fn execute_4xnn_does_not_skip_if_vx_equals_nn() {
     let mut emulator = Emulator::new();
 
     emulator.pc = PROGRAM_START_ADDRESS;
-    emulator.v[4] = 0x32;
+    emulator.v[0x4] = 0x32;
 
     emulator.memory[PROGRAM_START_INDEX] = 0x44;
     emulator.memory[PROGRAM_START_INDEX + 1] = 0x32;
@@ -238,8 +240,8 @@ fn execute_5xy0_skips_if_vx_equals_vy() {
     let mut emulator = Emulator::new();
 
     emulator.pc = PROGRAM_START_ADDRESS;
-    emulator.v[4] = 0x32;
-    emulator.v[5] = 0x32;
+    emulator.v[0x4] = 0x32;
+    emulator.v[0x5] = 0x32;
 
     emulator.memory[PROGRAM_START_INDEX] = 0x54;
     emulator.memory[PROGRAM_START_INDEX + 1] = 0x50;
@@ -254,8 +256,8 @@ fn execute_5xy0_does_not_skip_if_vx_does_not_equal_vy() {
     let mut emulator = Emulator::new();
 
     emulator.pc = PROGRAM_START_ADDRESS;
-    emulator.v[6] = 0x62;
-    emulator.v[7] = 0x63;
+    emulator.v[0x6] = 0x62;
+    emulator.v[0x7] = 0x63;
 
     emulator.memory[PROGRAM_START_INDEX] = 0x56;
     emulator.memory[PROGRAM_START_INDEX + 1] = 0x70;
@@ -271,8 +273,8 @@ fn execute_5xyn_panics() {
     let mut emulator = Emulator::new();
 
     emulator.pc = PROGRAM_START_ADDRESS;
-    emulator.v[6] = 0x62;
-    emulator.v[7] = 0x63;
+    emulator.v[0x6] = 0x62;
+    emulator.v[0x7] = 0x63;
 
     emulator.memory[PROGRAM_START_INDEX] = 0x56;
     emulator.memory[PROGRAM_START_INDEX + 1] = 0x71;
@@ -502,8 +504,8 @@ fn execute_8xyn_panics() {
     let mut emulator = Emulator::new();
 
     emulator.pc = PROGRAM_START_ADDRESS;
-    emulator.v[6] = 0x62;
-    emulator.v[7] = 0x63;
+    emulator.v[0x6] = 0x62;
+    emulator.v[0x7] = 0x63;
 
     emulator.memory[PROGRAM_START_INDEX] = 0x86;
     emulator.memory[PROGRAM_START_INDEX + 1] = 0x7F;
@@ -516,8 +518,8 @@ fn execute_9xy0_skips_if_vx_does_not_equal_vy() {
     let mut emulator = Emulator::new();
 
     emulator.pc = PROGRAM_START_ADDRESS;
-    emulator.v[6] = 0x62;
-    emulator.v[7] = 0x63;
+    emulator.v[0x6] = 0x62;
+    emulator.v[0x7] = 0x63;
 
     emulator.memory[PROGRAM_START_INDEX] = 0x96;
     emulator.memory[PROGRAM_START_INDEX + 1] = 0x70;
@@ -532,8 +534,8 @@ fn execute_9xy0_does_not_skip_if_vx_equals_vy() {
     let mut emulator = Emulator::new();
 
     emulator.pc = PROGRAM_START_ADDRESS;
-    emulator.v[4] = 0x32;
-    emulator.v[5] = 0x32;
+    emulator.v[0x4] = 0x32;
+    emulator.v[0x5] = 0x32;
 
     emulator.memory[PROGRAM_START_INDEX] = 0x94;
     emulator.memory[PROGRAM_START_INDEX + 1] = 0x50;
@@ -549,8 +551,8 @@ fn execute_9xyn_panics() {
     let mut emulator = Emulator::new();
 
     emulator.pc = PROGRAM_START_ADDRESS;
-    emulator.v[6] = 0x62;
-    emulator.v[7] = 0x63;
+    emulator.v[0x6] = 0x62;
+    emulator.v[0x7] = 0x63;
 
     emulator.memory[PROGRAM_START_INDEX] = 0x96;
     emulator.memory[PROGRAM_START_INDEX + 1] = 0x71;
@@ -574,7 +576,7 @@ fn execute_annn_sets_i_to_nnn() {
 fn execute_bnnn_jumps_to_address_v0_plus_nnn() {
     let mut emulator = Emulator::new();
 
-    emulator.v[0] = 0x1A;
+    emulator.v[0x0] = 0x1A;
     emulator.memory[PROGRAM_START_INDEX] = 0xB6;
     emulator.memory[PROGRAM_START_INDEX + 1] = 0x54;
 
@@ -587,39 +589,39 @@ fn execute_bnnn_jumps_to_address_v0_plus_nnn() {
 fn execute_cxnn_with_zero_mask_sets_vx_to_zero() {
     let mut emulator = Emulator::new();
 
-    emulator.v[6] = 0x1A;
+    emulator.v[0x6] = 0x1A;
     emulator.memory[PROGRAM_START_INDEX] = 0xC6;
     emulator.memory[PROGRAM_START_INDEX + 1] = 0x00;
 
     emulator.execute();
 
-    assert_eq!(emulator.v[6], 0);
+    assert_eq!(emulator.v[0x6], 0);
 }
 
 #[test]
 fn execute_cxnn_with_0f_mask_clears_high_nibble() {
     let mut emulator = Emulator::new();
 
-    emulator.v[6] = 0x1A;
+    emulator.v[0x6] = 0x1A;
     emulator.memory[PROGRAM_START_INDEX] = 0xC6;
     emulator.memory[PROGRAM_START_INDEX + 1] = 0x0F;
 
     emulator.execute();
 
-    assert_eq!(emulator.v[6] & 0xF0, 0);
+    assert_eq!(emulator.v[0x6] & 0xF0, 0);
 }
 
 #[test]
 fn execute_cxnn_with_f0_mask_clears_low_nibble() {
     let mut emulator = Emulator::new();
 
-    emulator.v[6] = 0x1A;
+    emulator.v[0x6] = 0x1A;
     emulator.memory[PROGRAM_START_INDEX] = 0xC6;
     emulator.memory[PROGRAM_START_INDEX + 1] = 0xF0;
 
     emulator.execute();
 
-    assert_eq!(emulator.v[6] & 0x0F, 0);
+    assert_eq!(emulator.v[0x6] & 0x0F, 0);
 }
 
 #[test]
@@ -753,6 +755,171 @@ fn execute_dxyn_past_memory_bounds_panics() {
 
     emulator.memory[PROGRAM_START_INDEX] = 0xD1;
     emulator.memory[PROGRAM_START_INDEX + 1] = 0x22;
+
+    emulator.execute();
+}
+
+#[test]
+fn execute_ex9e_skips_if_key_in_vx_pressed() {
+    let mut emulator = Emulator::new();
+
+    emulator.v[0x1] = 0x5;
+    emulator.input[0x5] = true;
+    emulator.pc = 0x200;
+
+    emulator.memory[PROGRAM_START_INDEX] = 0xE1;
+    emulator.memory[PROGRAM_START_INDEX + 1] = 0x9E;
+
+    emulator.execute();
+
+    assert_eq!(emulator.pc, 0x204);
+}
+
+#[test]
+fn execute_ex9e_does_not_skip_if_key_in_vx_not_pressed() {
+    let mut emulator = Emulator::new();
+
+    emulator.v[0x1] = 0x6;
+    emulator.input[0x6] = false;
+    emulator.pc = 0x200;
+
+    emulator.memory[PROGRAM_START_INDEX] = 0xE1;
+    emulator.memory[PROGRAM_START_INDEX + 1] = 0x9E;
+
+    emulator.execute();
+
+    assert_eq!(emulator.pc, 0x202);
+}
+
+#[test]
+#[should_panic]
+fn execute_ex9e_with_vx_larger_than_0xf_panics() {
+    let mut emulator = Emulator::new();
+
+    emulator.v[0x1] = 0x40;
+
+    emulator.memory[PROGRAM_START_INDEX] = 0xE1;
+    emulator.memory[PROGRAM_START_INDEX + 1] = 0x9E;
+
+    emulator.execute();
+}
+
+#[test]
+fn execute_exa1_skips_if_key_in_vx_not_pressed() {
+    let mut emulator = Emulator::new();
+
+    emulator.v[0x1] = 0x5;
+    emulator.input[0x5] = false;
+    emulator.pc = 0x200;
+
+    emulator.memory[PROGRAM_START_INDEX] = 0xE1;
+    emulator.memory[PROGRAM_START_INDEX + 1] = 0xA1;
+
+    emulator.execute();
+
+    assert_eq!(emulator.pc, 0x204);
+}
+
+#[test]
+fn execute_exa1_does_not_skip_if_key_in_vx_pressed() {
+    let mut emulator = Emulator::new();
+
+    emulator.v[0x1] = 0x6;
+    emulator.input[0x6] = true;
+    emulator.pc = 0x200;
+
+    emulator.memory[PROGRAM_START_INDEX] = 0xE1;
+    emulator.memory[PROGRAM_START_INDEX + 1] = 0xA1;
+
+    emulator.execute();
+
+    assert_eq!(emulator.pc, 0x202);
+}
+
+#[test]
+#[should_panic]
+fn execute_exa1_with_vx_larger_than_0xf_panics() {
+    let mut emulator = Emulator::new();
+
+    emulator.v[0x1] = 0x10;
+
+    emulator.memory[PROGRAM_START_INDEX] = 0xE1;
+    emulator.memory[PROGRAM_START_INDEX + 1] = 0xA1;
+
+    emulator.execute();
+}
+
+#[test]
+#[should_panic]
+fn execute_exnn_panics() {
+    let mut emulator = Emulator::new();
+
+    emulator.memory[PROGRAM_START_INDEX] = 0xE1;
+    emulator.memory[PROGRAM_START_INDEX + 1] = 0x44;
+
+    emulator.execute();
+}
+
+#[test]
+fn execute_fx0a_blocks_if_no_key_pressed() {
+    let mut emulator = Emulator::new();
+
+    emulator.v[0x4] = 0xFF;
+    emulator.input = [false; INPUT_KEYS_COUNT];
+    emulator.pc = 0x200;
+
+    emulator.memory[PROGRAM_START_INDEX] = 0xF4;
+    emulator.memory[PROGRAM_START_INDEX + 1] = 0x0A;
+
+    emulator.execute();
+
+    assert_eq!(emulator.pc, 0x200);
+    assert_eq!(emulator.v[0x4], 0xFF);
+}
+
+#[test]
+fn execute_fx0a_sets_vx_to_key_pressed() {
+    let mut emulator = Emulator::new();
+
+    emulator.v[0x4] = 0xFF;
+    emulator.input[0xB] = true;
+    emulator.pc = 0x200;
+
+    emulator.memory[PROGRAM_START_INDEX] = 0xF4;
+    emulator.memory[PROGRAM_START_INDEX + 1] = 0x0A;
+
+    emulator.execute();
+
+    assert_eq!(emulator.pc, 0x202);
+    assert_eq!(emulator.v[0x4], 0xB);
+}
+
+#[test]
+fn execute_fx0a_sets_vx_to_lowest_key_pressed() {
+    let mut emulator = Emulator::new();
+
+    emulator.v[0x4] = 0xFF;
+    emulator.input[0x2] = true;
+    emulator.input[0x4] = true;
+    emulator.input[0xB] = true;
+    emulator.pc = 0x200;
+
+    emulator.memory[PROGRAM_START_INDEX] = 0xF4;
+    emulator.memory[PROGRAM_START_INDEX + 1] = 0x0A;
+
+    emulator.execute();
+
+    assert_eq!(emulator.pc, 0x202);
+    assert_eq!(emulator.v[0x4], 0x2);
+}
+
+#[test]
+#[should_panic]
+fn execute_fxnn_panics() {
+    let mut emulator = Emulator::new();
+
+    emulator.memory[PROGRAM_START_INDEX] = 0xF1;
+    emulator.memory[PROGRAM_START_INDEX + 1] = 0x11;
 
     emulator.execute();
 }

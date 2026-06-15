@@ -6,6 +6,7 @@ const DISPLAY_HEIGHT: usize = 32;
 const REGISTER_COUNT: usize = 16;
 const STACK_SIZE: usize = 16;
 const MAX_ROM_SIZE: usize = MEMORY_SIZE - PROGRAM_START_INDEX;
+const INPUT_KEYS_COUNT: usize = 16;
 
 pub type Display = [[bool; DISPLAY_WIDTH]; DISPLAY_HEIGHT];
 
@@ -23,6 +24,7 @@ pub struct Emulator {
     stack: [u16; STACK_SIZE],
     stack_pointer: usize,
     display: Display,
+    input: [bool; INPUT_KEYS_COUNT],
 }
 
 impl Emulator {
@@ -188,6 +190,36 @@ impl Emulator {
 
                 self.v[0xF] = if overflow { 1 } else { 0 };
             }
+            0xE000 => match nn {
+                0x9E => {
+                    assert!(self.v[x] <= 0xF, "Only keys from 0 to F are supported");
+
+                    if self.input[usize::from(self.v[x])] {
+                        self.pc += 2;
+                    }
+                }
+                0xA1 => {
+                    assert!(self.v[x] <= 0xF, "Only keys from 0 to F are supported");
+
+                    if !self.input[usize::from(self.v[x])] {
+                        self.pc += 2;
+                    }
+                }
+
+                _ => panic!("Unknown instruction"),
+            },
+            0xF000 => match nn {
+                0x0A => match self.input.iter().position(|key| *key) {
+                    Some(key) => {
+                        self.v[x] = key as u8;
+                    }
+                    None => {
+                        self.pc -= 2;
+                    }
+                },
+
+                _ => panic!("Unknown instruction"),
+            },
 
             _ => panic!("Unknown instruction"),
         };
@@ -210,6 +242,7 @@ impl Emulator {
             stack: [0; STACK_SIZE],
             stack_pointer: 0,
             display: [[false; DISPLAY_WIDTH]; DISPLAY_HEIGHT],
+            input: [false; INPUT_KEYS_COUNT],
         }
     }
 }
