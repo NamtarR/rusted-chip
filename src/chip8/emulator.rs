@@ -25,6 +25,8 @@ pub struct Emulator {
     stack_pointer: usize,
     display: Display,
     input: [bool; INPUT_KEYS_COUNT],
+    delay_timer: u8,
+    sound_timer: u8,
 }
 
 impl Emulator {
@@ -217,6 +219,9 @@ impl Emulator {
                         self.pc -= 2;
                     }
                 },
+                0x07 => self.v[x] = self.delay_timer,
+                0x15 => self.delay_timer = self.v[x],
+                0x18 => self.sound_timer = self.v[x],
 
                 _ => panic!("Unknown instruction"),
             },
@@ -243,6 +248,8 @@ impl Emulator {
             stack_pointer: 0,
             display: [[false; DISPLAY_WIDTH]; DISPLAY_HEIGHT],
             input: [false; INPUT_KEYS_COUNT],
+            delay_timer: 0,
+            sound_timer: 0,
         }
     }
 }

@@ -56,6 +56,8 @@ fn reset_restores_initial_state() {
     emulator.stack_pointer = 13;
     emulator.display = [[true; DISPLAY_WIDTH]; DISPLAY_HEIGHT];
     emulator.input = [true; INPUT_KEYS_COUNT];
+    emulator.delay_timer = 0x23;
+    emulator.sound_timer = 0x2F;
 
     emulator.reset();
 
@@ -67,6 +69,8 @@ fn reset_restores_initial_state() {
     assert_eq!(emulator.stack_pointer, 0);
     assert_eq!(emulator.display, [[false; DISPLAY_WIDTH]; DISPLAY_HEIGHT]);
     assert_eq!(emulator.input, [false; INPUT_KEYS_COUNT]);
+    assert_eq!(emulator.delay_timer, 0);
+    assert_eq!(emulator.sound_timer, 0);
 }
 
 #[test]
@@ -858,6 +862,54 @@ fn execute_exnn_panics() {
     emulator.memory[PROGRAM_START_INDEX + 1] = 0x44;
 
     emulator.execute();
+}
+
+#[test]
+fn execute_fx07_sets_vx_to_delay_timer_value() {
+    let mut emulator = Emulator::new();
+
+    emulator.v[0x4] = 0x0;
+    emulator.delay_timer = 0x40;
+
+    emulator.memory[PROGRAM_START_INDEX] = 0xF4;
+    emulator.memory[PROGRAM_START_INDEX + 1] = 0x07;
+
+    emulator.execute();
+
+    assert_eq!(emulator.v[0x4], 0x40);
+    assert_eq!(emulator.delay_timer, 0x40);
+}
+
+#[test]
+fn execute_fx15_sets_delay_timer_value_to_vx() {
+    let mut emulator = Emulator::new();
+
+    emulator.v[0x4] = 0x33;
+    emulator.delay_timer = 0x0;
+
+    emulator.memory[PROGRAM_START_INDEX] = 0xF4;
+    emulator.memory[PROGRAM_START_INDEX + 1] = 0x15;
+
+    emulator.execute();
+
+    assert_eq!(emulator.delay_timer, 0x33);
+    assert_eq!(emulator.v[0x4], 0x33);
+}
+
+#[test]
+fn execute_fx18_sets_sound_timer_value_to_vx() {
+    let mut emulator = Emulator::new();
+
+    emulator.v[0x6] = 0x21;
+    emulator.sound_timer = 0x0;
+
+    emulator.memory[PROGRAM_START_INDEX] = 0xF6;
+    emulator.memory[PROGRAM_START_INDEX + 1] = 0x18;
+
+    emulator.execute();
+
+    assert_eq!(emulator.sound_timer, 0x21);
+    assert_eq!(emulator.v[0x6], 0x21);
 }
 
 #[test]
