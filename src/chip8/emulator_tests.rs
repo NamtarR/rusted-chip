@@ -1045,6 +1045,60 @@ fn execute_fx29_takes_lowest_four_bits_of_vx() {
 }
 
 #[test]
+fn execute_fx33_converts_binary_to_decimal_and_puts_into_memory_at_i() {
+    let mut emulator = Emulator::new();
+
+    emulator.i = 0x300;
+    emulator.memory[0x300] = 0;
+    emulator.memory[0x301] = 0;
+    emulator.memory[0x302] = 0;
+    emulator.v[0x8] = 0x9C;
+
+    emulator.memory[PROGRAM_START_INDEX] = 0xF8;
+    emulator.memory[PROGRAM_START_INDEX + 1] = 0x33;
+
+    emulator.execute();
+
+    assert_eq!(emulator.memory[0x300], 1);
+    assert_eq!(emulator.memory[0x301], 5);
+    assert_eq!(emulator.memory[0x302], 6);
+}
+
+#[test]
+fn execute_fx33_writes_to_last_three_memory_bytes() {
+    let mut emulator = Emulator::new();
+
+    emulator.i = (MEMORY_SIZE - 3) as u16;
+    emulator.memory[MEMORY_SIZE - 3] = 0;
+    emulator.memory[MEMORY_SIZE - 2] = 0;
+    emulator.memory[MEMORY_SIZE - 1] = 0;
+    emulator.v[0x8] = 0x9C;
+
+    emulator.memory[PROGRAM_START_INDEX] = 0xF8;
+    emulator.memory[PROGRAM_START_INDEX + 1] = 0x33;
+
+    emulator.execute();
+
+    assert_eq!(emulator.memory[MEMORY_SIZE - 3], 1);
+    assert_eq!(emulator.memory[MEMORY_SIZE - 2], 5);
+    assert_eq!(emulator.memory[MEMORY_SIZE - 1], 6);
+}
+
+#[test]
+#[should_panic]
+fn execute_fx33_if_i_points_beyond_edge_of_memory_panics() {
+    let mut emulator = Emulator::new();
+
+    emulator.i = (MEMORY_SIZE - 2) as u16;
+    emulator.v[0x8] = 0x9C;
+
+    emulator.memory[PROGRAM_START_INDEX] = 0xF8;
+    emulator.memory[PROGRAM_START_INDEX + 1] = 0x33;
+
+    emulator.execute();
+}
+
+#[test]
 #[should_panic]
 fn execute_fxnn_panics() {
     let mut emulator = Emulator::new();

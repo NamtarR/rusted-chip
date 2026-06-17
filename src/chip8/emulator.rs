@@ -237,6 +237,19 @@ impl Emulator {
                     self.i = FONT_START_ADDRESS
                         + u16::from(self.v[x] & 0x0F) * FONT_CHARACTER_SIZE as u16
                 }
+                0x33 => {
+                    assert!(
+                        usize::from(self.i) <= MEMORY_SIZE - 3,
+                        "Cannot store into memory beyond bounds"
+                    );
+
+                    let mut value = self.v[x];
+
+                    for i in 0..3 {
+                        self.memory[usize::from(self.i) + 2 - i as usize] = value % 10;
+                        value = value / 10;
+                    }
+                }
 
                 _ => panic!("Unknown instruction"),
             },
