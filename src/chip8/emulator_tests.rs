@@ -966,6 +966,40 @@ fn execute_fx0a_sets_vx_to_lowest_key_pressed() {
 }
 
 #[test]
+fn execute_fx1e_adds_vx_to_index() {
+    let mut emulator = Emulator::new();
+
+    emulator.i = 0x152;
+    emulator.v[0x6] = 0x25;
+    emulator.v[0xF] = 1;
+
+    emulator.memory[PROGRAM_START_INDEX] = 0xF6;
+    emulator.memory[PROGRAM_START_INDEX + 1] = 0x1E;
+
+    emulator.execute();
+
+    assert_eq!(emulator.i, 0x177);
+    assert_eq!(emulator.v[0xF], 0);
+}
+
+#[test]
+fn execute_fx1e_adds_vx_to_index_and_vf_to_1() {
+    let mut emulator = Emulator::new();
+
+    emulator.i = 0xFFF;
+    emulator.v[0x6] = 0x25;
+    emulator.v[0xF] = 0;
+
+    emulator.memory[PROGRAM_START_INDEX] = 0xF6;
+    emulator.memory[PROGRAM_START_INDEX + 1] = 0x1E;
+
+    emulator.execute();
+
+    assert_eq!(emulator.i, 0x1024);
+    assert_eq!(emulator.v[0xF], 1);
+}
+
+#[test]
 #[should_panic]
 fn execute_fxnn_panics() {
     let mut emulator = Emulator::new();

@@ -222,6 +222,10 @@ impl Emulator {
                 0x07 => self.v[x] = self.delay_timer,
                 0x15 => self.delay_timer = self.v[x],
                 0x18 => self.sound_timer = self.v[x],
+                0x1e => {
+                    self.i = self.i + u16::from(self.v[x]);
+                    self.v[0xF] = (self.i >> 12) as u8;
+                }
 
                 _ => panic!("Unknown instruction"),
             },
