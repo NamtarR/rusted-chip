@@ -1,3 +1,5 @@
+use super::font::{self, FONT_CHARACTER_SIZE};
+
 const MEMORY_SIZE: usize = 4096;
 const PROGRAM_START_INDEX: usize = 0x200;
 const PROGRAM_START_ADDRESS: u16 = 0x200;
@@ -7,6 +9,9 @@ const REGISTER_COUNT: usize = 16;
 const STACK_SIZE: usize = 16;
 const MAX_ROM_SIZE: usize = MEMORY_SIZE - PROGRAM_START_INDEX;
 const INPUT_KEYS_COUNT: usize = 16;
+const FONT_START_INDEX: usize = 0x050;
+const FONT_START_ADDRESS: u16 = 0x050;
+const FONT_END_INDEX: usize = 0x09F;
 
 pub type Display = [[bool; DISPLAY_WIDTH]; DISPLAY_HEIGHT];
 
@@ -226,6 +231,12 @@ impl Emulator {
                     self.i = self.i + u16::from(self.v[x]);
                     self.v[0xF] = (self.i >> 12) as u8;
                 }
+                0x29 => {
+                    // The original COSMAC VIP interpreter just took the last nibble of VX
+                    // and used that as the character.
+                    self.i = FONT_START_ADDRESS
+                        + u16::from(self.v[x] & 0x0F) * FONT_CHARACTER_SIZE as u16
+                }
 
                 _ => panic!("Unknown instruction"),
             },
@@ -243,7 +254,7 @@ impl Emulator {
     }
 
     pub fn new() -> Emulator {
-        Emulator {
+        let mut emulator = Emulator {
             v: [0; REGISTER_COUNT],
             i: 0,
             pc: PROGRAM_START_ADDRESS,
@@ -254,7 +265,17 @@ impl Emulator {
             input: [false; INPUT_KEYS_COUNT],
             delay_timer: 0,
             sound_timer: 0,
-        }
+        };
+
+        emulator.load_font();
+
+        emulator
+    }
+
+    fn load_font(&mut self) {
+        let font_memory = &mut self.memory[FONT_START_INDEX..FONT_END_INDEX + 1];
+
+        font_memory.copy_from_slice(&font::FONT);
     }
 }
 

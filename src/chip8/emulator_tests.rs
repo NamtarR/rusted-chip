@@ -1,3 +1,5 @@
+use crate::chip8::font::FONT_CHARACTER_SIZE;
+
 use super::*;
 
 #[test]
@@ -64,13 +66,20 @@ fn reset_restores_initial_state() {
     assert_eq!(emulator.v, [0; REGISTER_COUNT]);
     assert_eq!(emulator.i, 0);
     assert_eq!(emulator.pc, PROGRAM_START_ADDRESS);
-    assert_eq!(emulator.memory, [0; MEMORY_SIZE]);
+    assert_eq!(
+        emulator.memory[PROGRAM_START_INDEX..MEMORY_SIZE],
+        [0; MEMORY_SIZE - PROGRAM_START_INDEX]
+    );
     assert_eq!(emulator.stack, [0; STACK_SIZE]);
     assert_eq!(emulator.stack_pointer, 0);
     assert_eq!(emulator.display, [[false; DISPLAY_WIDTH]; DISPLAY_HEIGHT]);
     assert_eq!(emulator.input, [false; INPUT_KEYS_COUNT]);
     assert_eq!(emulator.delay_timer, 0);
     assert_eq!(emulator.sound_timer, 0);
+    assert_eq!(
+        emulator.memory[FONT_START_INDEX..FONT_END_INDEX + 1],
+        font::FONT
+    );
 }
 
 #[test]
@@ -997,6 +1006,42 @@ fn execute_fx1e_adds_vx_to_index_and_vf_to_1() {
 
     assert_eq!(emulator.i, 0x1024);
     assert_eq!(emulator.v[0xF], 1);
+}
+
+#[test]
+fn execute_fx29_sets_i_to_font_character_address() {
+    let mut emulator = Emulator::new();
+
+    emulator.i = 0x300;
+    emulator.v[0x6] = 0x5;
+
+    emulator.memory[PROGRAM_START_INDEX] = 0xF6;
+    emulator.memory[PROGRAM_START_INDEX + 1] = 0x29;
+
+    emulator.execute();
+
+    assert_eq!(
+        emulator.i,
+        (FONT_START_INDEX + 0x5 * FONT_CHARACTER_SIZE) as u16
+    );
+}
+
+#[test]
+fn execute_fx29_takes_lowest_four_bits_of_vx() {
+    let mut emulator = Emulator::new();
+
+    emulator.i = 0x300;
+    emulator.v[0x8] = 0xFF;
+
+    emulator.memory[PROGRAM_START_INDEX] = 0xF8;
+    emulator.memory[PROGRAM_START_INDEX + 1] = 0x29;
+
+    emulator.execute();
+
+    assert_eq!(
+        emulator.i,
+        (FONT_START_INDEX + 0xF * FONT_CHARACTER_SIZE) as u16
+    );
 }
 
 #[test]
