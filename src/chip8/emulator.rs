@@ -240,14 +240,35 @@ impl Emulator {
                 0x33 => {
                     assert!(
                         usize::from(self.i) <= MEMORY_SIZE - 3,
-                        "Cannot store into memory beyond bounds"
+                        "Cannot write to memory beyond bounds"
                     );
 
                     let mut value = self.v[x];
 
                     for i in 0..3 {
-                        self.memory[usize::from(self.i) + 2 - i as usize] = value % 10;
+                        self.memory[usize::from(self.i) + 2 - i] = value % 10;
                         value = value / 10;
+                    }
+                }
+                0x55 => {
+                    assert!(
+                        usize::from(self.i) <= MEMORY_SIZE - x - 1,
+                        "Cannot write to memory beyond bounds"
+                    );
+
+                    // In this case, I does not change. Will be configurable later.
+                    for i in 0..x + 1 {
+                        self.memory[usize::from(self.i) + i] = self.v[i];
+                    }
+                }
+                0x65 => {
+                    assert!(
+                        usize::from(self.i) <= MEMORY_SIZE - x - 1,
+                        "Cannot read into memory beyond bounds"
+                    );
+
+                    for i in 0..x + 1 {
+                        self.v[i] = self.memory[usize::from(self.i) + i as usize];
                     }
                 }
 

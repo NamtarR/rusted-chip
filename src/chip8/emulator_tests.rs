@@ -1099,6 +1099,138 @@ fn execute_fx33_if_i_points_beyond_edge_of_memory_panics() {
 }
 
 #[test]
+fn execute_fx55_writes_registers_into_memory() {
+    let mut emulator = Emulator::new();
+
+    emulator.i = 0x300;
+    emulator.v[0x0] = 1;
+    emulator.v[0x1] = 2;
+    emulator.v[0x2] = 3;
+    emulator.v[0x3] = 4;
+
+    emulator.memory[PROGRAM_START_INDEX] = 0xF3;
+    emulator.memory[PROGRAM_START_INDEX + 1] = 0x55;
+
+    emulator.execute();
+
+    assert_eq!(emulator.memory[0x300..0x304], [1, 2, 3, 4]);
+    assert_eq!(emulator.i, 0x300);
+}
+
+#[test]
+fn execute_fx55_writes_only_v0_into_memory() {
+    let mut emulator = Emulator::new();
+
+    emulator.i = 0x300;
+    emulator.v[0x0] = 1;
+
+    emulator.memory[PROGRAM_START_INDEX] = 0xF0;
+    emulator.memory[PROGRAM_START_INDEX + 1] = 0x55;
+
+    emulator.execute();
+
+    assert_eq!(emulator.memory[0x300..0x301], [1]);
+    assert_eq!(emulator.i, 0x300);
+}
+
+#[test]
+fn execute_fx55_writes_to_last_x_plus_1_memory_bytes() {
+    let mut emulator = Emulator::new();
+
+    emulator.i = (MEMORY_SIZE - 3) as u16;
+    emulator.v[0x0] = 1;
+    emulator.v[0x1] = 2;
+    emulator.v[0x2] = 3;
+
+    emulator.memory[PROGRAM_START_INDEX] = 0xF2;
+    emulator.memory[PROGRAM_START_INDEX + 1] = 0x55;
+
+    emulator.execute();
+
+    assert_eq!(emulator.memory[MEMORY_SIZE - 3..MEMORY_SIZE], [1, 2, 3]);
+    assert_eq!(emulator.i, (MEMORY_SIZE - 3) as u16);
+}
+
+#[test]
+#[should_panic]
+fn execute_fx55_panics_if_registers_would_exceed_memory_bounds() {
+    let mut emulator = Emulator::new();
+
+    emulator.i = (MEMORY_SIZE - 8) as u16;
+
+    emulator.memory[PROGRAM_START_INDEX] = 0xF8;
+    emulator.memory[PROGRAM_START_INDEX + 1] = 0x55;
+
+    emulator.execute();
+}
+
+#[test]
+fn execute_fx65_reads_memory_into_registers() {
+    let mut emulator = Emulator::new();
+
+    emulator.i = 0x300;
+    emulator.memory[0x300] = 1;
+    emulator.memory[0x301] = 2;
+    emulator.memory[0x302] = 3;
+    emulator.memory[0x303] = 4;
+
+    emulator.memory[PROGRAM_START_INDEX] = 0xF3;
+    emulator.memory[PROGRAM_START_INDEX + 1] = 0x65;
+
+    emulator.execute();
+
+    assert_eq!(emulator.v[0x0..0x4], [1, 2, 3, 4]);
+    assert_eq!(emulator.i, 0x300);
+}
+
+#[test]
+fn execute_fx65_reads_memory_into_v0_only() {
+    let mut emulator = Emulator::new();
+
+    emulator.i = 0x300;
+    emulator.memory[0x300] = 1;
+
+    emulator.memory[PROGRAM_START_INDEX] = 0xF0;
+    emulator.memory[PROGRAM_START_INDEX + 1] = 0x65;
+
+    emulator.execute();
+
+    assert_eq!(emulator.v[0x0], 1);
+    assert_eq!(emulator.i, 0x300);
+}
+
+#[test]
+fn execute_fx65_reads_from_last_x_plus_1_memory_bytes() {
+    let mut emulator = Emulator::new();
+
+    emulator.i = (MEMORY_SIZE - 3) as u16;
+    emulator.memory[MEMORY_SIZE - 3] = 1;
+    emulator.memory[MEMORY_SIZE - 2] = 2;
+    emulator.memory[MEMORY_SIZE - 1] = 3;
+
+    emulator.memory[PROGRAM_START_INDEX] = 0xF2;
+    emulator.memory[PROGRAM_START_INDEX + 1] = 0x65;
+
+    emulator.execute();
+
+    assert_eq!(emulator.v[0x0..0x3], [1, 2, 3]);
+    assert_eq!(emulator.i, (MEMORY_SIZE - 3) as u16);
+}
+
+#[test]
+#[should_panic]
+fn execute_fx65_panics_if_registers_would_exceed_memory_bounds() {
+    let mut emulator = Emulator::new();
+
+    emulator.i = (MEMORY_SIZE - 8) as u16;
+
+    emulator.memory[PROGRAM_START_INDEX] = 0xF8;
+    emulator.memory[PROGRAM_START_INDEX + 1] = 0x65;
+
+    emulator.execute();
+}
+
+#[test]
 #[should_panic]
 fn execute_fxnn_panics() {
     let mut emulator = Emulator::new();
