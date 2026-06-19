@@ -7,14 +7,14 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     let path = &args[1];
 
-    let mut runtime = runtime::Runtime::new();
+    let mut runner = runtime::Runner::new();
 
     let bytes = fs::read(path).unwrap();
 
-    runtime.load(&bytes);
-    runtime.run_steps(255);
+    runner.load(&bytes);
+    runner.run_steps(255);
 
-    let result = runtime.display();
+    let result = runner.display();
 
     for row in result.iter() {
         for pixel in row.iter() {

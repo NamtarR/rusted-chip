@@ -289,6 +289,10 @@ impl Emulator {
         self.sound_timer = self.sound_timer.saturating_sub(decrement);
     }
 
+    pub fn sound_timer(&self) -> u8 {
+        self.sound_timer
+    }
+
     pub fn reset(&mut self) {
         *self = Self::new();
     }

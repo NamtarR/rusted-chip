@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 rand = "0.10.1"
 approx = "0.5.1"
+rodio = "0.22.2"
