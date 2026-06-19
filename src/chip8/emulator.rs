@@ -1,16 +1,21 @@
 use super::font::{self, FONT_CHARACTER_SIZE};
 
 const MEMORY_SIZE: usize = 4096;
-const PROGRAM_START_INDEX: usize = 0x200;
+
 const PROGRAM_START_ADDRESS: u16 = 0x200;
+const PROGRAM_START_INDEX: usize = PROGRAM_START_ADDRESS as usize;
+
+const MAX_ROM_SIZE: usize = MEMORY_SIZE - PROGRAM_START_INDEX;
+
 const DISPLAY_WIDTH: usize = 64;
 const DISPLAY_HEIGHT: usize = 32;
+
 const REGISTER_COUNT: usize = 16;
 const STACK_SIZE: usize = 16;
-const MAX_ROM_SIZE: usize = MEMORY_SIZE - PROGRAM_START_INDEX;
 const INPUT_KEYS_COUNT: usize = 16;
-const FONT_START_INDEX: usize = 0x050;
+
 const FONT_START_ADDRESS: u16 = 0x050;
+const FONT_START_INDEX: usize = FONT_START_ADDRESS as usize;
 const FONT_END_INDEX: usize = 0x09F;
 
 pub type Display = [[bool; DISPLAY_WIDTH]; DISPLAY_HEIGHT];
@@ -277,6 +282,11 @@ impl Emulator {
 
             _ => panic!("Unknown instruction"),
         };
+    }
+
+    pub fn tick_timers(&mut self, decrement: u8) {
+        self.delay_timer = self.delay_timer.saturating_sub(decrement);
+        self.sound_timer = self.sound_timer.saturating_sub(decrement);
     }
 
     pub fn reset(&mut self) {

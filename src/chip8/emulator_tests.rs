@@ -83,6 +83,32 @@ fn reset_restores_initial_state() {
 }
 
 #[test]
+fn tick_timers_decrements_timers() {
+    let mut emulator = Emulator::new();
+
+    emulator.delay_timer = 0xFF;
+    emulator.sound_timer = 0x65;
+
+    emulator.tick_timers(0x2B);
+
+    assert_eq!(emulator.delay_timer, 0xD4);
+    assert_eq!(emulator.sound_timer, 0x3A);
+}
+
+#[test]
+fn tick_timers_clears_timers_on_overflow() {
+    let mut emulator = Emulator::new();
+
+    emulator.delay_timer = 0x13;
+    emulator.sound_timer = 0x65;
+
+    emulator.tick_timers(0xFF);
+
+    assert_eq!(emulator.delay_timer, 0);
+    assert_eq!(emulator.sound_timer, 0);
+}
+
+#[test]
 #[should_panic]
 fn execute_unknown_instruction_panics() {
     let mut emulator = Emulator::new();

@@ -12,7 +12,7 @@ fn main() {
     let bytes = fs::read(path).unwrap();
 
     runtime.load(&bytes);
-    runtime.run_steps(24);
+    runtime.run_steps(255);
 
     let result = runtime.display();
 
