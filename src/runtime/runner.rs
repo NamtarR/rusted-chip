@@ -60,6 +60,14 @@ impl Runner {
         self.run_steps(1);
     }
 
+    pub fn set_key(&mut self, key: u8, pressed: bool) {
+        self.emulator.set_key(key, pressed);
+    }
+
+    pub fn clear_keys(&mut self) {
+        self.emulator.clear_keys();
+    }
+
     /*
      * Here usize seems appropriate as even u16 overflows at frame_time > ~94 seconds
      */

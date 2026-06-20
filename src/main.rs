@@ -2,24 +2,17 @@ use std::{env, fs};
 
 mod chip8;
 mod runtime;
+mod tui;
 
-fn main() {
+fn main() -> std::io::Result<()> {
     let args: Vec<String> = env::args().collect();
     let path = &args[1];
 
+    let rom_bytes = fs::read(path).unwrap();
+
     let mut runner = runtime::Runner::new();
 
-    let bytes = fs::read(path).unwrap();
+    runner.load(&rom_bytes);
 
-    runner.load(&bytes);
-    runner.run_steps(255);
-
-    let result = runner.display();
-
-    for row in result.iter() {
-        for pixel in row.iter() {
-            if *pixel { print!("##") } else { print!("  ") }
-        }
-        println!()
-    }
+    tui::App::start(&mut runner)
 }

@@ -289,6 +289,14 @@ impl Emulator {
         self.sound_timer = self.sound_timer.saturating_sub(decrement);
     }
 
+    pub fn set_key(&mut self, key: u8, pressed: bool) {
+        self.input[key as usize] = pressed;
+    }
+
+    pub fn clear_keys(&mut self) {
+        self.input = [false; INPUT_KEYS_COUNT];
+    }
+
     pub fn sound_timer(&self) -> u8 {
         self.sound_timer
     }
